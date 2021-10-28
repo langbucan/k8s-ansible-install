@@ -1,0 +1,99 @@
+---
+- hosts: master
+  vars_files:
+    - host.yaml
+
+  tasks:
+    - name: add epel-release
+      yum: name=epel-release
+
+#    - name: time proofreading
+#      yum: name=ntpdate 
+#    - name: utpdate 
+#      shell: "ntpdate cn.pool.ntp.org"
+
+    - name: add master ip and name to hosts
+      shell: "echo {{master_ip}} {{master_name}} >> /etc/hosts"
+
+    - name: add node ip and name to hosts
+      shell: "echo {{node_ip}} {{node_name}} >> /etc/hosts"
+
+    - name: stop firewalld 
+      service: name=firewalld state=stopped
+
+    - name: stop  swap
+      shell: "swapoff -a"
+
+    - name: stop selinux
+      lineinfile: dest=/etc/selinux/config regexp="^SELINUX=" line="SELINUX=disabled"
+
+    - name: install common software
+      yum:
+        name:
+          - wget
+          - vim
+          - yum-utils
+          - device-mapper-persistent-data 
+          - lvm2
+
+    - name: install docker repo
+      shell: "yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo"
+
+    - name: install docker-ce 
+      yum: name=docker-ce-{{docker_version}}
+
+    - name: start docker and enable docker
+      service: name=docker state=started enabled=yes
+
+    - name: config kubernetes repo
+      copy: src=/etc/yum.repos.d/kubernetes.repo dest=/etc/yum.repos.d/kubernetes.repo
+
+    - name: install kubeadm kubelet kubectl version is {{cluster_version}}
+      yum:
+        name:
+          - kubeadm-{{kubeadm_version}}
+          - kubelet-{{kubelet_version}}
+          - kubectl-{{kubectl_version}}
+          - ipvsadm
+
+    - name: config kubernetes kubelet
+      copy: src=/etc/sysconfig/kubelet dest=/etc/sysconfig/kubelet
+
+    - name: start kernel module
+      shell: "modprobe br_netfilter"
+
+    - name: add kernel parameter
+      copy: src=/etc/sysctl.d/k8s.conf dest=/etc/sysctl.d/k8s.conf
+    - name: systctl system
+      shell: sysctl --system
+
+    - name: sh local script to pull cluster images
+      script: "/etc/ansible/docker-image.sh"
+
+    - name: update configuration file
+      shell: "systemctl daemon-reload"
+    - name: start kubelet and enable kubelet
+      service: name=kubelet state=started enabled=yes
+
+    - name: init cluster
+      shell: "kubeadm init --kubernetes-version={{cluster_version}} --pod-network-cidr={{pod_cni}} --apiserver-advertise-address={{master_ip}} --ignore-preflight-errors=Swap"
+
+    - name: delete cluster config
+      shell: "rm -rf  $HOME/.kube"
+    - name: config cluster file one
+      shell: "mkdir -p $HOME/.kube"
+    - name: config cluster file two
+      shell: "cp -i /etc/kubernetes/admin.conf $HOME/.kube/config"
+    - name: config cluster file three
+      shell: "chown $(id -u):$(id -g) $HOME/.kube/config"
+
+    - name: copy cni network file
+      copy: src=/etc/ansible/kube-flannel.yml dest=/root/kube-flannel.yml
+    - name: create cni network flannel
+      shell: "kubectl apply -f /root/kube-flannel.yml"
+
+    - name: create token to add node
+      shell: "kubeadm token create --print-join-command > /root/node-add.sh"
+
+    - name: copy this file to local
+      fetch: src=/root/node-add.sh dest=/etc/ansible/
