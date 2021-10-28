@@ -1,0 +1,6 @@
+[host]
+master_ip=192.168.71.206
+master_name=master
+
+node_ip=192.168.71.66
+node_name=node
