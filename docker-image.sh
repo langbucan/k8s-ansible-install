@@ -1,9 +1,17 @@
 #!/bin/bash
-K8S_VERSION=v1.16.2
-ETCD_VERSION=3.3.15-0
-DASHBOARD_VERSION=v1.8.3
-DNS_VERSION=1.6.2
-PAUSE_VERSION=3.1
+version=`kubeadm config images list`
+VERSION=(`echo "$version"|awk -F ':' '{print $2}'`)
+
+#echo $VERSION
+K8S_VERSION=${VERSION[0]}
+#echo $K8S_VERSION
+ETCD_VERSION=${VERSION[5]}
+#echo $ETCD_VERSION
+DNS_VERSION=${VERSION[6]}
+#echo $DNS_VERSION
+PAUSE_VERSION=${VERSION[4]}
+#echo $PAUSE_VERSION
+
 docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/kube-apiserver:$K8S_VERSION
 docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/kube-controller-manager:$K8S_VERSION
 docker pull registry.cn-hangzhou.aliyuncs.com/google_containers/kube-scheduler:$K8S_VERSION
@@ -19,6 +27,7 @@ docker tag registry.cn-hangzhou.aliyuncs.com/google_containers/kube-proxy:$K8S_V
 docker tag registry.cn-hangzhou.aliyuncs.com/google_containers/pause:$PAUSE_VERSION k8s.gcr.io/pause:$PAUSE_VERSION
 docker tag registry.cn-hangzhou.aliyuncs.com/google_containers/coredns:$DNS_VERSION k8s.gcr.io/coredns:$DNS_VERSION
 docker tag registry.cn-hangzhou.aliyuncs.com/google_containers/etcd:$ETCD_VERSION k8s.gcr.io/etcd:$ETCD_VERSION
+
 
 
 
