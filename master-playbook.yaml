@@ -4,6 +4,9 @@
     - host.yaml
 
   tasks:
+    - name: edit hostname
+      shell: "hostnamectl set-hostname {{master_name}}"
+
     - name: add epel-release
       yum: name=epel-release
 
@@ -35,6 +38,10 @@
           - yum-utils
           - device-mapper-persistent-data 
           - lvm2
+      register: software_status
+    - name: echo software info
+      debug:
+        var: software_status
 
     - name: install docker repo
       shell: "yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo"
@@ -44,6 +51,11 @@
 
     - name: start docker and enable docker
       service: name=docker state=started enabled=yes
+
+    - name: see docker status
+      shell: docker info
+      register: docker 
+    - debug: var=docker.stdout_lines
 
     - name: config kubernetes repo
       copy: src=/etc/yum.repos.d/kubernetes.repo dest=/etc/yum.repos.d/kubernetes.repo
@@ -55,6 +67,10 @@
           - kubelet-{{kubelet_version}}
           - kubectl-{{kubectl_version}}
           - ipvsadm
+      register: kube_software_status
+    - name: echo cluster info
+      debug:
+        var: kube_software_status
 
     - name: config kubernetes kubelet
       copy: src=/etc/sysconfig/kubelet dest=/etc/sysconfig/kubelet
@@ -74,6 +90,10 @@
       shell: "systemctl daemon-reload"
     - name: start kubelet and enable kubelet
       service: name=kubelet state=started enabled=yes
+      register: kubelet_status
+    - name: echo kubelet info
+      debug:
+        var: kubelet_status
 
     - name: init cluster
       shell: "kubeadm init --kubernetes-version={{cluster_version}} --pod-network-cidr={{pod_cni}} --apiserver-advertise-address={{master_ip}} --ignore-preflight-errors=Swap"
@@ -87,8 +107,15 @@
     - name: config cluster file three
       shell: "chown $(id -u):$(id -g) $HOME/.kube/config"
 
+    - name: download flannel yaml
+      shell: "wget -P /etc/ https://raw.githubusercontent.com/langbucan/flannel-file/master/flannel/flannel.yml"
+
+    - name: choose flannel network type
+      shell: "sed -i \"s@`cat /etc/flannel.yml | grep Type | awk -F ' ' '{print $2}'`@{{flannel_type}}@\" /etc/flannel.yml"
+
     - name: copy cni network file
-      copy: src=/etc/ansible/kube-flannel.yml dest=/root/kube-flannel.yml
+      copy: src=/etc/flannel.yml dest=/root/kube-flannel.yml
+
     - name: create cni network flannel
       shell: "kubectl apply -f /root/kube-flannel.yml"
 
@@ -97,3 +124,13 @@
 
     - name: copy this file to local
       fetch: src=/root/node-add.sh dest=/etc/ansible/
+
+    - name: see cluster status
+      shell: kubectl get node
+#      tags: test
+      register: cluster_status
+    - name: echo cluster info
+      debug:
+        var: cluster_status
+#        msg: "{{cluster_status}}"
+#      tags: test
