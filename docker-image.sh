@@ -2,7 +2,6 @@
 version=`kubeadm config images list`
 VERSION=(`echo "$version"|awk -F ':' '{print $2}'`)
 
-#echo $VERSION
 K8S_VERSION=${VERSION[0]}
 #echo $K8S_VERSION
 ETCD_VERSION=${VERSION[5]}
@@ -27,7 +26,6 @@ docker tag registry.cn-hangzhou.aliyuncs.com/google_containers/kube-proxy:$K8S_V
 docker tag registry.cn-hangzhou.aliyuncs.com/google_containers/pause:$PAUSE_VERSION k8s.gcr.io/pause:$PAUSE_VERSION
 docker tag registry.cn-hangzhou.aliyuncs.com/google_containers/coredns:$DNS_VERSION k8s.gcr.io/coredns:$DNS_VERSION
 docker tag registry.cn-hangzhou.aliyuncs.com/google_containers/etcd:$ETCD_VERSION k8s.gcr.io/etcd:$ETCD_VERSION
-
 
 
 
