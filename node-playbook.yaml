@@ -4,20 +4,26 @@
     - host.yaml
 
   tasks:
+    - name: edit hostname
+      shell: "hostnamectl set-hostname {{node_name}}"
+
     - name: add epel-release
       yum: name=epel-release
 
-    - name: time proofreading
-      yum: name=ntpdate 
+#    - name: time proofreading
+#      yum: name=ntpdate 
 
-    - name: utpdate 
-      shell: "ntpdate cn.pool.ntp.org"
+#    - name: utpdate 
+#      shell: "ntpdate cn.pool.ntp.org"
 
     - name: add master ip and name to hosts
       shell: "echo {{master_ip}} {{master_name}} >> /etc/hosts"
 
     - name: add node ip and name to hosts
       shell: "echo {{node_ip}} {{node_name}} >> /etc/hosts"
+
+#    - name: add node ip and name to hosts
+#      shell: "echo {{node3_ip}} {{node3_name}} >> /etc/hosts"
 
     - name: stop firewalld 
       service: name=firewalld state=stopped
@@ -36,6 +42,10 @@
           - yum-utils
           - device-mapper-persistent-data 
           - lvm2
+      register: software_status
+    - name: echo cluster info
+      debug:
+        var: software_status
 
     - name: install docker repo
       shell: "yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo"
@@ -45,6 +55,11 @@
 
     - name: start docker and enable docker
       service: name=docker state=started enabled=yes
+
+    - name: see docker status
+      shell: docker info
+      register: docker
+    - debug: var=docker.stdout_lines
 
     - name: config kubernetes repo
       copy: src=/etc/yum.repos.d/kubernetes.repo dest=/etc/yum.repos.d/kubernetes.repo
@@ -56,6 +71,10 @@
           - kubelet-{{kubelet_version}}
           - kubectl-{{kubectl_version}}
           - ipvsadm
+      register: cluster_status
+    - name: echo cluster info
+      debug:
+        var: cluster_status
 
     - name: config kubernetes kubelet
       copy: src=/etc/sysconfig/kubelet dest=/etc/sysconfig/kubelet
@@ -77,6 +96,10 @@
 
     - name: start kubelet and enable kubelet
       service: name=kubelet state=started enabled=yes
+      register: kubelet_status
+    - name: echo cluster info
+      debug:
+        var: kubelet_status
 
     - name: shell node-add file to join cluster
       script: "/etc/ansible/{{master_ip}}/root/node-add.sh"
