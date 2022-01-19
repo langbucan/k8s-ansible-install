@@ -1,14 +1,18 @@
-master_ip: 192.168.71.206
+master_ip: 192.168.80.40
 master_name: master
 
-node_ip: 192.168.71.66
+node_ip: 192.168.80.232
 node_name: node
 
-docker_version: 19.03.13
+node3_ip: 192.168.200.212
+node3_name: node3
 
-cluster_version: v1.16.2
-kubeadm_version: 1.16.2 
-kubelet_version: 1.16.2
-kubectl_version: 1.16.2
+docker_version: 18.09.7
+
+cluster_version: v1.18.20
+kubeadm_version: 1.18.20
+kubelet_version: 1.18.20
+kubectl_version: 1.18.20
 
 pod_cni: 10.244.0.0/16
+flannel_type: \"vxlan\"
